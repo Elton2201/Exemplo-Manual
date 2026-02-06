@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIP FROM STORE - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url('6.jpg'); /* Background image for the entire application */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #334155; /* slate-700 */
+        }
+        #dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            background-color: rgba(255, 255, 255, 0.95); /* White background with slight transparency for readability */
+            justify-content: center; /* Center content horizontally */
+            align-items: flex-start; /* Align content to the top vertically */
+        }
+        #main-content-area {
+            flex-grow: 1;
+            padding: 2.5rem;
+            overflow-y: auto;
+            min-height: calc(100vh - 5rem); /* Ensure main content area has a minimum height, accounting for padding */
+            max-width: 1200px; /* Optional: limit max width for better readability on very wide screens */
+            width: 100%; /* Ensure it takes full width within its container */
+        }
+        .content-section {
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.5s ease-out;
+            min-height: 600px; /* Increased min-height for content sections to prevent jumping */
+        }
+        .content-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0;
+            transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0);
+            }
+        }
+
+        /* Overview clickable items */
+        .overview-item {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 180px; /* Ensure uniform size for overview items */
+        }
+        .overview-item:hover {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .overview-item .icon {
+            font-size: 4rem; /* Larger icons for overview */
+            margin-bottom: 0.75rem;
+            color: #f59e0b; /* Mustard accent for icons */
+        }
+        .overview-item p {
+            font-weight: 600;
+            color: #374151; /* Dark gray text */
+        }
+
+        /* Dashboard specific cards (for Fluxo SFS) */
+        .dashboard-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+        }
+        .dashboard-card:hover {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .dashboard-card h3 {
+            color: #374151; /* Dark gray */
+        }
+        .dashboard-card p {
+            color: #374151; /* Dark gray */
+        }
+        .dashboard-card .text-amber-500 { /* Specific color for "Ativos" */
+            color: #f59e0b;
+        }
+        .dashboard-card .text-green-600 { /* Specific color for "Excelente" - adjusted to mustard/gray for consistency */
+            color: #f59e0b; /* Changed from green to mustard */
+        }
+        .dashboard-card .text-blue-600 { /* Specific color for "Otimizada" - adjusted to mustard/gray for consistency */
+            color: #374151; /* Changed from blue to dark gray */
+        }
+
+
+        /* Common styles for process cards */
+        .process-flow-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-height: 280px; /* Ensure a minimum height for consistency */
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .process-flow-card:hover {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .process-flow-card .icon {
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+            color: #f59e0b; /* Mustard accent */
+        }
+        .process-flow-card .number {
+            background-color: #e5e7eb; /* Light gray */
+            color: #374151; /* Dark gray */
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-bottom: 0.75rem;
+        }
+        .process-detail-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+            width: 100%;
+            text-align: left;
+        }
+        .process-detail-content.expanded {
+            max-height: 1500px; /* Large enough for image and text */
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .arrow-separator {
+            font-size: 2.5rem;
+            color: #d1d5db; /* gray-300 */
+            margin: 0 1rem;
+        }
+        .recovery-step-card {
+            background-color: #f3f4f6; /* Lighter gray for recovery steps */
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border: 2px solid #9ca3af; /* Medium gray border */
+            min-height: 220px; /* Uniform height in recovery steps */
+        }
+        .recovery-step-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .recovery-step-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+            width: 100%;
+            text-align: left;
+        }
+        .recovery-step-content.expanded {
+            max-height: 300px;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        .recovery-step-number {
+            background-color: #6b7280; /* Darker gray for numbers */
+            color: white;
+            font-weight: 700;
+            border-radius: 9999px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.5rem;
+        }
+        .recovery-arrow {
+            font-size: 2rem;
+            color: #9ca3af; /* Medium gray */
+        }
+
+        /* Policy/Warning sections */
+        .policy-section {
+            background-color: #fef3c7; /* light yellow for policy/warning */
+            border-left-color: #fbbf24; /* mustard border */
+            color: #92400e; /* dark orange text */
+        }
+        .policy-section button {
+            background-color: #f59e0b; /* mustard button */
+            color: white;
+        }
+        .policy-section button:hover {
+            background-color: #d97706; /* darker mustard */
+        }
+        .policy-section .text-red-200 { /* Adjusting text color for toggle span in policy button */
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Back to overview button styling */
+        .back-to-overview-button {
+            background-color: #1f2937; /* Dark gray, matching original sidebar */
+            color: #f3f4f6; /* Light gray text */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 2rem;
+            border: none;
+            outline: none;
+        }
+        .back-to-overview-button:hover {
+            background-color: #374151; /* Darker gray on hover */
+            transform: translateY(-1px);
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #dashboard-container {
+                flex-direction: column;
+            }
+            .arrow-separator {
+                transform: rotate(90deg);
+                margin: 1rem 0;
+            }
+        }
+        
+        /* Estilos do Modal de Imagem */
+        #image-modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        #modal-image {
+            max-width: 90%;
+            max-height: 90%;
+            display: block;
+            margin: auto;
+            border-radius: 0.5rem;
+        }
+        #modal-close-button {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        #modal-close-button:hover,
+        #modal-close-button:focus {
+            color: #999;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .enlargeable-image {
+            cursor: zoom-in;
+            transition: transform 0.2s ease;
+        }
+        .enlargeable-image:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="dashboard-container">
+        <div id="main-content-area">
+
+            <section id="overview-section" class="content-section active">
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">SHIP & PICKUP FROM STORE</h1>
+                    <p class="mt-2 text-lg md:text-xl font-medium text-gray-600">Selecione um tópico para explorar os detalhes de cada fluxo:</p>
+                </header>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 justify-items-center">
+                    <div class="overview-item" data-section="separacao-tablet">
+                        <span class="icon">📱</span>
+                        <p class="text-lg">Separação Tablet</p>
+                    </div>
+                    <div class="overview-item" data-section="separacao-pdv">
+                        <span class="icon">🧾</span>
+                        <p class="text-lg">Separação PDV</p>
+                    </div>
+                    <div class="overview-item" data-section="retirada-loja">
+                        <span class="icon">🛍️</span>
+                        <p class="text-lg">Retirada em Loja</p>
+                    </div>
+                    <div class="overview-item" data-section="entrega-pedido">
+                        <span class="icon">🚚</span>
+                        <p class="text-lg">Entrega do Pedido (motoboy)</p>
+                    </div>
+                    <div class="overview-item" data-section="devolucoes">
+                        <span class="icon">↩️</span>
+                        <p class="text-lg">Devoluções e Trocas</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="separacao-tablet-section" class="content-section">
+                <button class="back-to-overview-button" data-target-section="overview-section">
+                    <span class="icon">🏠</span> Voltar para Visão Geral
+                </button>
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">PROCESSO DE SEPARAÇÃO (TABLET)</h1>
+                    <p class="mt-2 text-lg md:text-xl text-gray-600"></p>
+                </header>
+                <main>
+                    <section class="mb-12">
+                        <div class="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-8">
+                            
+                            <div id="step-1-tablet" class="process-flow-card p-4 w-full sm:w-1/4">
+                                <div class="number">1</div>
+                                <div class="icon">📱</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    O colaborador deverá logar com seu acesso no APP "Venda Tablet", digitar sua chapa, senha e encontrar a loja pelo nome ou código. Após entrar, deve clicar na função "Clique e Retire" (lateral superior esquerda ao lado do nome da marca).
+                                    <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    </ul>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step1.jpg" data-large-src="placeholder-step1.jpg" alt="Imagem do passo 1: Entrar no app" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+                            
+                            <div id="step-2-tablet" class="process-flow-card p-4 w-full sm:w-1/4">
+                                <div class="number">2</div>
+                                <div class="icon">📋</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    O colaborador deverá selecionar o pedido indicado em vermelho como "Pendente Separação".
+                                    <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    </ul>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step2.jpg" data-large-src="placeholder-step2.jpg" alt="Imagem do passo 2: Selecionar o pedido" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+                            
+                            <div id="step-3-tablet" class="process-flow-card p-4 w-full sm:w-1/4">
+                                <div class="number">3</div>
+                                <div class="icon">🛒</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Após selecionar o pedido, o colaborador deverá separar todos os itens indicados na tela e bipar (ou digitar) um a um para validação da peça.
+                                    <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    </ul>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step3.jpg" data-large-src="placeholder-step3.jpg" alt="Imagem do passo 3: Bipar os itens" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="mb-12 p-6 policy-section border-l-4 rounded-lg shadow-md max-w-4xl mx-auto">
+                        <h3 class="font-bold text-lg mb-2 flex items-center">
+                            <span class="text-2xl mr-2">⚠️</span> ATENÇÃO:
+                        </h3>
+                        <p class="text-gray-700 mb-4">
+                            • Antes de bipar o produto o colaborador deverá validar o artigo na descrição informado no tablet, se o mesmo corresponde com o que está demonstrado na TAG. O colaborador deve se atentar nos casos de digitação onde dever ser inserido todos os números do código.
+                        </p>
+                        <p class="text-gray-700">
+                            • Pedidos realizados após o horário de expediente, o processo de separação e armazenagem devem ser concluídos no primeiro horário do dia seguinte.
+                        </p>
+                        <div id="note-details-tablet" class="process-detail-content px-2">
+                            <h4 class="font-semibold text-gray-700 mt-4 mb-2">Impacto no atraso da separação:</h4>
+                            <ul class="list-none space-y-2 text-left text-sm">
+                                <li class="flex items-start"><span class="text-amber-500 mr-2 mt-1">✔</span> <div><span class="font-semibold">Cliente:</span> Todo cliente compra sabendo do prazo de retirada ou entrega, ou seja, é importante garantir uma separação rápida e correta, evitando o cancelamento por ruptura de estoque e reclamações nas mídias sociais.</div></li>
+                                <li class="flex items-start"><span class="text-amber-500 mr-2 mt-1">✔</span> <div><span class="font-semibold">Nota fiscal:</span> Importante imprimir a nota e garantir uma foto visível e inteira da mesma.</div></li>
+                                <li class="flex items-start"><span class="text-amber-500 mr-2 mt-1">✔</span> <div><span class="font-semibold">Finalizar fluxo no tablet:</span> Lembrando que o cliente só recebe a notificação de retirada e o motoboy de coleta após a finalização do fluxo no tablet.</div></li>
+                            </ul>
+                        </div>
+                        <button class="toggle-details-button mt-4 px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition duration-300 text-sm">Ver Detalhes</button>
+                    </section>
+                </main>
+            </section>
+
+            <section id="separacao-pdv-section" class="content-section">
+                <button class="back-to-overview-button" data-target-section="overview-section">
+                    <span class="icon">🏠</span> Voltar para Visão Geral
+                </button>
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">FLUXO DE SEPARAÇÃO (PDV)</h1>
+                    <p class="mt-2 text-lg md:text-xl text-gray-600">Seguir o passo a passo:</p>
+                </header>
+                <main>
+                    <section class="mb-12">
+                        <div class="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-8">
+                            
+                            <div id="step-4-pdv" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">4</div>
+                                <div class="icon">📱</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Após bipar os produtos, um código PDV é gerado indicando que o colaborador deverá seguir até ao caixa no botão "pedidos" e digitar os números informados na tela para gerar a nota fiscal. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                   <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step4.jpg" data-large-src="placeholder-step4.jpg" alt="Imagem do passo 4: Resgatar cupom fiscal" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+
+                            <div id="step-5-pdv" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">5</div>
+                                <div class="icon">📸</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Após gerar a nota no PDV, o colaborador deverá tirar uma foto visível e centralizada da mesma e finalizar o pedido no tablet. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <img src="Fotos/5.jpg" data-large-src="5.jpg" alt="[Imagem da Nota Fiscal]" class="w-full h-auto rounded-md mb-4 border border-gray-300 enlargeable-image">
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+
+                            <div id="step-6-pdv" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">6</div>
+                                <div class="icon">✔️</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Cliente e motoboy só recebem o OK do pedido após 100% finalizado no tablet. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Atenção:</h4>
+                                    <p class="text-gray-600 text-sm">Liberação final do pedido para retirada/entrega somente após a confirmação completa de todas as etapas.</p>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step6.jpg" data-large-src="placeholder-step6.jpg" alt="Exemplo da tela de finalização no tablet" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </section>
+
+            <section id="retirada-loja-section" class="content-section">
+                <button class="back-to-overview-button" data-target-section="overview-section">
+                    <span class="icon">🏠</span> Voltar para Visão Geral
+                </button>
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">RETIRADA DO PEDIDO EM LOJA</h1>
+                    <p class="mt-2 text-lg md:text-xl text-gray-600">Atenção na retirada dos pedidos:</p>
+                </header>
+                <main>
+                    <section class="mb-12">
+                        <div class="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-8">
+                            <div id="step-1-retirada" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">1</div>
+                                <div class="icon">📱</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Após separação e finalização no tablet, o cliente é notificado via e-mail para buscar o pedido. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Atenção:</h4>
+                                    <p class="text-gray-600 text-sm">Importante a separação com agilidade para não frustrar o cliente no prazo indicado ao realizar a compra.</p>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step1-retirada.jpg" data-large-src="placeholder-step1-retirada.jpg" alt="Imagem do passo 1 de Retirada" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+
+                            <div id="step-2-retirada" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">2</div>
+                                <div class="icon">💳</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Com o documento em mãos, o colaborador abre pedido no tablet e faz a entrega ao titular da compra. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Atenção:</h4>
+                                    <p class="text-gray-600 text-sm">Importante conferir o documento e os itens comprados junto ao cliente.</p>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step2-retirada.jpg" data-large-src="placeholder-step2-retirada.jpg" alt="Imagem do passo 2 de Retirada" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+
+                            <div id="step-3-retirada" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">3</div>
+                                <div class="icon">🛍️</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Processo finalizado e pedido entregue ao cliente. 
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Atenção:</h4>
+                                    <p class="text-gray-600 text-sm">Em caso de problemas na entrega via tablet, reiniciar o tablet e verificar se o Wi-Fi está habilitado corretamente.</p>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="placeholder-step3-retirada.jpg" data-large-src="placeholder-step3-retirada.jpg" alt="Imagem do passo 3 de Retirada" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="mb-12 p-6 policy-section border-l-4 rounded-lg shadow-md max-w-xl mx-auto">
+                        <button id="thirdPartyButton-retirada" class="w-full py-3 bg-amber-500 text-white font-bold rounded-md hover:bg-amber-600 transition duration-300">
+                            POLÍTICA DE RETIRADA: SOMENTE O TITULAR <span class="text-xs text-white opacity-75">(Mostrar Detalhes)</span>
+                        </button>
+                        <div id="thirdPartyContent-retirada" class="process-detail-content px-2 mt-4">
+                            <h4 class="font-semibold text-gray-700 mb-2">Atenção:</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm">
+                                <li>Segurança: Retirada permitida exclusivamente ao titular da compra.</li>
+                                <li>Identificação: Titular deve apresentar documento original com foto.</li>
+                            </ul>
+                            </ul>
+                        </div>
+                    </section>
+                </main>
+            </section>
+
+            <section id="entrega-pedido-section" class="content-section">
+                <button class="back-to-overview-button" data-target-section="overview-section">
+                    <span class="icon">🏠</span> Voltar para Visão Geral
+                </button>
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">ENTREGA DO PEDIDO POR MOTOBOY</h1>
+                </header>
+                <main>
+                    <section class="mb-12">
+                        <div class="flex flex-col sm:flex-row justify-center items-center gap-6 md:gap-8">
+                            <div id="step-1-entrega" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">1</div>
+                                <div class="icon">👤💳</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Motoboy se identifica, comprova o pedido em seu celular, informa seu CPF e assina no tablet para iniciar a rota. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Cuidado:</h4>
+                                    <p class="text-gray-600 text-sm">Se atentar na separação e sinalização do pedido para localizar rapidamente quando o motoboy chegar.</p>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step1-entrega.jpg" data-large-src="placeholder-step1-entrega.jpg" alt="Imagem do passo 1 de Entrega" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+
+                            <div id="step-2-entrega" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">2</div>
+                                <div class="icon">🛵💨</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Motoboy segue ao endereço, realiza a entrega via aplicativo e finaliza a corrida com evidências. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step2-entrega.jpg" data-large-src="placeholder-step2-entrega.jpg" alt="Imagem do passo 2 de Entrega" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span class="arrow-separator hidden sm:block">❯</span>
+                            <span class="arrow-separator block sm:hidden">V</span>
+
+                            <div id="step-3-entrega" class="process-flow-card p-4 w-full sm:w-1/3">
+                                <div class="number">3</div>
+                                <div class="icon">📱🔄</div>
+                                <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                                    Motoboy não achou o cliente? Retorna à loja e o colaborador registra o insucesso no tablet selecionando o botão azul para que uma nova tentativa de entrega seja realizada no dia seguinte. <span class="text-xs text-yellow-500">(Mostrar Detalhes)</span>
+                                </p>
+                                <div class="process-detail-content px-2">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Atenção:</h4>
+                                    <p class="text-gray-600 text-sm">O time responsável pelo acompanhamento dos pedidos com insucesso de entrega seguirá analisando essas devoluções para que uma nova ordem de coleta seja anexada na plataforma e uma nova tentativa de entrega seja realizada no dia seguinte.</p>
+                                    <div class="mt-4 flex justify-center">
+                                        <img src="Fotos/placeholder-step3-entrega.jpg" data-large-src="placeholder-step3-entrega.jpg" alt="Imagem do passo 3 de Entrega" class="w-full max-w-xs rounded-md border border-gray-300 enlargeable-image">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </section>
+            
+            <section id="devolucoes-section" class="content-section">
+                <button class="back-to-overview-button" data-target-section="overview-section">
+                    <span class="icon">🏠</span> Voltar para Visão Geral
+                </button>
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">FLUXO DE DEVOLUÇÃO</h1>
+                </header>
+                <main>
+                    <div class="text-center text-gray-600">
+                        <p>Seguir o passo a passo abaixo:</p>
+                        <ul class="list-disc list-inside mx-auto text-left max-w-lg mt-4">
+                            <li>Fazer a devolução no PDV;</li>
+                            <li>Suprir o valor;</li>
+                            <li>Abrir um chamado (Jira) na fila: “Aplicacao-Tesouraria-Cancelamento Shipping From Store”.</li>
+                            <li>Informar o pedido e motivo + anexar foto da nota original + nota de devolução.</li>
+                            <li>Após o atendimento do chamado, sua tesouraria será ajustada e o cliente estornado (LOJA NÃO DEVOLVE NENHUM VALOR AO CLIENTE).</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-8 mb-8 flex flex-col items-center">
+                        <h4 class="font-semibold text-gray-700 mb-4">Fila para abertura de chamado via Jira:</h4>
+                        <img src="Fotos/placeholder-devolucao.jpg" alt="Imagem da Nota de Devolução" class="w-full max-w-sm h-auto rounded-md border border-gray-400 shadow-md enlargeable-image">
+                        <p class="text-xs text-gray-500 mt-2">Exemplo: Fotografia nítida da nota de devolução.</p>
+                    </div>
+                </main>
+            </section>
+
+            <section id="troca-section" class="content-section">
+                <button class="back-to-overview-button" data-target-section="overview-section">
+                    <span class="icon">🏠</span> Voltar para Visão Geral
+                </button>
+                <header class="text-center mb-8 md:mb-12">
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">PROCESSO DE TROCA</h1>
+                    <p class="mt-2 text-lg md:text-xl text-gray-600">Detalhes sobre o processo de troca de pedidos.</p>
+                </header>
+                <main>
+                    <div id="troca-card" class="process-flow-card p-4 w-full sm:w-1/2 mx-auto">
+                        <div class="icon">🔄</div>
+                        <p class="text-sm text-gray-600 mb-4 cursor-pointer font-medium hover:text-amber-500 transition duration-200">
+                            Clique para ver o passo a passo da troca <span class="text-xs text-gray-500">(Mostrar Detalhes)</span>
+                        </p>
+
+                        <div class="process-detail-content px-2">
+                            <h4 class="font-semibold text-gray-700 mb-2">Passo a passo para troca:</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-2">
+                                <li>Verificar se o produto a ser trocado está em condições originais e com a embalagem.</li>
+                                <li>Registrar a troca no PDV e, se necessário, emitir nota fiscal de entrada.</li>
+                                <li>Abrir um chamado (Jira) na fila: “Aplicacao-Tesouraria-Troca Shipping From Store”.</li>
+                                <li>Informar o pedido, motivo da troca e anexar fotos do produto e das notas fiscais.</li>
+                            </ul>
+
+                            <div class="mt-8 mb-8 flex flex-col items-center">
+                                <h4 class="font-semibold text-gray-700 mb-4">Imagem do Produto para Troca:</h4>
+                                <img src="Fotos/devolucao.jpg" alt="Imagem do Produto para Troca" class="w-full max-w-sm h-auto rounded-md border border-gray-300 shadow-md">
+                            </div>
+                        </div>
+                        <button class="toggle-details-button mt-4 px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition duration-300 text-sm">
+                            Ver Detalhes
+                        </button>
+                    </div>
+                </main>
+            </section>
+        </div>
+    </div>
+    
+    <div id="image-modal">
+        <span id="modal-close-button">&times;</span>
+        <img id="modal-image" src="" alt="Imagem ampliada">
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Function to show a specific content section
+            function showSection(sectionId) {
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                document.getElementById(sectionId).classList.add('active');
+            }
+
+            // Event listeners for overview clickable items
+            document.querySelectorAll('.overview-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    showSection(sectionId);
+                });
+            });
+
+            // Event listeners for "Back to Overview" buttons
+            document.querySelectorAll('.back-to-overview-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetSectionId = this.getAttribute('data-target-section');
+                    showSection(targetSectionId);
+                });
+            });
+
+            // Function to toggle content visibility for a specific content element and its toggle span
+            function toggleContent(contentElement, toggleTextSpan) {
+                contentElement.classList.toggle('expanded');
+                if (contentElement.classList.contains('expanded')) {
+                    toggleTextSpan.textContent = '(Ocultar Detalhes)';
+                } else {
+                    toggleTextSpan.textContent = '(Mostrar Detalhes)';
+                }
+            }
+            
+            // Apply toggle functionality to all process cards (triggered by clicking the paragraph)
+            document.querySelectorAll('.process-flow-card p').forEach(paragraph => {
+                const content = paragraph.nextElementSibling;
+                const toggleTextSpan = paragraph.querySelector('span.text-xs');
+
+                if (content && toggleTextSpan) {
+                    content.classList.remove('expanded');
+                    toggleTextSpan.textContent = '(Mostrar Detalhes)';
+                    
+                    paragraph.addEventListener('click', function() {
+                        toggleContent(content, toggleTextSpan);
+                    });
+                }
+            });
+
+            // Specific initialization for "Observações Importantes" in FLUXO DE SEPARAÇÃO TABLET
+            const noteDetailsButton = document.querySelector('#separacao-tablet-section .policy-section button');
+            if (noteDetailsButton) {
+                const noteDetailsContent = document.getElementById('note-details-tablet');
+                let toggleTextSpan = noteDetailsButton.querySelector('span.text-xs');
+                if (!toggleTextSpan) {
+                    toggleTextSpan = document.createElement('span');
+                    toggleTextSpan.classList.add('text-xs', 'text-white', 'opacity-75');
+                    noteDetailsButton.appendChild(toggleTextSpan);
+                }
+
+                noteDetailsContent.classList.remove('expanded');
+                toggleTextSpan.textContent = '(Mostrar Detalhes)';
+
+                noteDetailsButton.addEventListener('click', function() {
+                    toggleContent(noteDetailsContent, toggleTextSpan);
+                });
+            }
+
+            // Specific initialization for "Política de Retirada" in RETIRADA EM LOJA
+            const thirdPartyButtonRetirada = document.getElementById('thirdPartyButton-retirada');
+            if (thirdPartyButtonRetirada) {
+                const thirdPartyContentRetirada = document.getElementById('thirdPartyContent-retirada');
+                const thirdPartyToggleTextSpanRetirada = thirdPartyButtonRetirada.querySelector('span.text-xs');
+
+                thirdPartyContentRetirada.classList.remove('expanded');
+                thirdPartyToggleTextSpanRetirada.textContent = '(Mostrar Detalhes)';
+
+                thirdPartyButtonRetirada.addEventListener('click', function() {
+                    toggleContent(thirdPartyContentRetirada, thirdPartyToggleTextSpanRetirada);
+                });
+            }
+            
+            // Script para o modal de imagem
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-image');
+            const closeBtn = document.getElementById('modal-close-button');
+            const enlargeableImages = document.querySelectorAll('.enlargeable-image');
+
+            enlargeableImages.forEach(img => {
+                img.addEventListener('click', () => {
+                    modal.style.display = 'flex';
+                    // Use o data-large-src se existir, caso contrário use o src normal
+                    modalImg.src = img.dataset.largeSrc || img.src;
+                });
+            });
+
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Show the overview section by default on load
+            showSection('overview-section');
+        });
+    </script>
+</body>
+</html>
